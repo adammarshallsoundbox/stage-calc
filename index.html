@@ -260,10 +260,34 @@ function calcLayout(w,d){
       tot++;if(is48)d48++;else d44++;
     }
   }
+  // Build the set of x-positions (in feet) for each row boundary
+  // Each row contributes column edges at 0, colWidth, 2*colWidth, ..., W
+  // A node exists at every (xFt, rowBoundary) intersection
+  // Count how many deck corners share each node
+  const rowBoundaries = []; // y-positions in row indices
+  let rb=0; rowBoundaries.push(0);
+  for(let r=0;r<rows.length;r++){rb++;rowBoundaries.push(rb);}
+
+  // For each row boundary, collect x-positions from row above and below
   let lp1=0,lp2=0,lp4=0;
-  for(let nr=0;nr<=tRows;nr++)for(let nc=0;nc<=uCols;nc++){
-    const sh=(Math.min(nc,1)+Math.min(uCols-nc,1))*(Math.min(nr,1)+Math.min(tRows-nr,1));
-    if(sh<=1)lp1++;else if(sh===2)lp2++;else lp4++;
+  for(let rb=0;rb<=rows.length;rb++){
+    const xsAbove = rb>0           ? [...Array(W/rows[rb-1].deckW+1)].map((_,i)=>i*rows[rb-1].deckW) : [];
+    const xsBelow = rb<rows.length ? [...Array(W/rows[rb].deckW+1)].map((_,i)=>i*rows[rb].deckW)     : [];
+    const xs = [...new Set([...xsAbove,...xsBelow])].sort((a,b)=>a-b);
+    for(const x of xs){
+      const edgeL = rb===0;
+      const edgeR = rb===rows.length;
+      // Count corners: left+right from rows above/below
+      const fromAbove = (!edgeL && xsAbove.includes(x)) ? 1 : 0;
+      const fromBelow = (!edgeR && xsBelow.includes(x)) ? 1 : 0;
+      const sharing = fromAbove + fromBelow;
+      const outerX = x===0||x===W;
+      const outerY = edgeL||edgeR;
+      if(outerX&&outerY)       lp1++;
+      else if(outerX||outerY)  lp2++;
+      else if(sharing>=2)      lp4++;
+      else                     lp2++;
+    }
   }
   return{rows,uCols,tRows,fs,frames,f48,f44,d48,d44,tot,lp1,lp2,lp4};
 }
@@ -347,18 +371,25 @@ function drawDiagram(rows,uCols,tRows,fs){
   // Outline
   ctx.strokeStyle='#f0a500';ctx.lineWidth=2;ctx.setLineDash([]);ctx.strokeRect(ox,oy,sW,sH);
 
-  // Nodes
-  const uCW=(W/uCols)*scale;
+  // Nodes — placed at actual deck-corner intersections per row
   const nodeYs=[...rowY,oy+D*scale];
-  for(let nr=0;nr<=tRows;nr++){
-    const py=nodeYs[nr];
-    for(let nc=0;nc<=uCols;nc++){
-      const px=ox+nc*uCW;
-      const sh=(Math.min(nc,1)+Math.min(uCols-nc,1))*(Math.min(nr,1)+Math.min(tRows-nr,1));
+  for(let rb=0;rb<=tRows;rb++){
+    const py=nodeYs[rb];
+    const xsAbove = rb>0       ? [...Array(W/rows[rb-1].deckW+1)].map((_,i)=>i*rows[rb-1].deckW) : [];
+    const xsBelow = rb<tRows   ? [...Array(W/rows[rb].deckW+1)].map((_,i)=>i*rows[rb].deckW)     : [];
+    const xs=[...new Set([...xsAbove,...xsBelow])].sort((a,b)=>a-b);
+    for(const xFt of xs){
+      const px=ox+xFt*scale;
+      const fromAbove=(rb>0     &&xsAbove.includes(xFt))?1:0;
+      const fromBelow=(rb<tRows &&xsBelow.includes(xFt))?1:0;
+      const sharing=fromAbove+fromBelow;
+      const outerX=xFt===0||xFt===W;
+      const outerY=rb===0||rb===tRows;
       let color,r;
-      if(sh<=1){color='#4a9eff';r=Math.max(5,scale*.22);}
-      else if(sh===2){color='#7c5ce8';r=Math.max(4,scale*.18);}
-      else{color='#f0a500';r=Math.max(3.5,scale*.15);}
+      if(outerX&&outerY)      {color='#4a9eff';r=Math.max(5,scale*.22);}
+      else if(outerX||outerY) {color='#7c5ce8';r=Math.max(4,scale*.18);}
+      else if(sharing>=2)     {color='#f0a500';r=Math.max(3.5,scale*.15);}
+      else                    {color='#7c5ce8';r=Math.max(4,scale*.18);}
       ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.arc(px,py,r*.4,0,Math.PI*2);ctx.fill();
     }
@@ -433,13 +464,18 @@ function exportPDF() {
           }
         }
         oc.strokeStyle='#f0a500';oc.lineWidth=2;oc.strokeRect(ox2,oy2,sW2,sH2);
-        const uCW2=(W/uCols)*sc, nYs=[...rY,oy2+D*sc];
-        for(let nr=0;nr<=tRows;nr++){
-          const py=nYs[nr];
-          for(let nc=0;nc<=uCols;nc++){
-            const px=ox2+nc*uCW2;
-            const sh=(Math.min(nc,1)+Math.min(uCols-nc,1))*(Math.min(nr,1)+Math.min(tRows-nr,1));
-            oc.fillStyle=sh<=1?'#4a9eff':sh===2?'#7c5ce8':'#f0a500';
+        const nYs=[...rY,oy2+D*sc];
+        for(let rb=0;rb<=tRows;rb++){
+          const py=nYs[rb];
+          const xsA=rb>0     ?[...Array(W/rows[rb-1].deckW+1)].map((_,i)=>i*rows[rb-1].deckW):[];
+          const xsB=rb<tRows ?[...Array(W/rows[rb].deckW+1)].map((_,i)=>i*rows[rb].deckW):[];
+          const xs=[...new Set([...xsA,...xsB])].sort((a,b)=>a-b);
+          for(const xFt of xs){
+            const px=ox2+xFt*sc;
+            const fA=(rb>0     &&xsA.includes(xFt))?1:0;
+            const fB=(rb<tRows &&xsB.includes(xFt))?1:0;
+            const outerX=xFt===0||xFt===W, outerY=rb===0||rb===tRows;
+            oc.fillStyle=(outerX&&outerY)?'#4a9eff':(outerX||outerY)?'#7c5ce8':(fA+fB>=2)?'#f0a500':'#7c5ce8';
             const r=Math.max(3,sc*0.18);
             oc.beginPath();oc.arc(px,py,r,0,Math.PI*2);oc.fill();
             oc.fillStyle='rgba(255,255,255,0.9)';
