@@ -231,32 +231,60 @@ function buildRows(w,d){
 }
 
 function computeFramed(cols,totalRows){
-  const f=Array.from({length:totalRows},()=>new Array(cols).fill(true));
-  let changed=true;
-  while(changed){
-    changed=false;
-    for(let r=0;r<totalRows;r++)for(let c=0;c<cols;c++){
-      if(!f[r][c])continue;
-      const sH=c>0&&c<cols-1&&f[r][c-1]&&f[r][c+1];
-      const sV=r>0&&r<totalRows-1&&f[r-1][c]&&f[r+1][c];
-      if(sH||sV){f[r][c]=false;changed=true;}
-    }
+  // Node-coverage model:
+  // A frame at (c,r) covers the 4 node-corners of that deck.
+  // A deck floats if all 4 of its node-corners are covered by at least one frame.
+  // Seed at every-other position + last col/row if odd-dimensioned,
+  // then gap-fill anything still uncovered.
+  const framed=new Set(), covered=new Set();
+
+  function addFrame(c,r){
+    if(c<0||c>=cols||r<0||r>=totalRows||framed.has(c+','+r))return;
+    framed.add(c+','+r);
+    covered.add(c+','+r); covered.add((c+1)+','+r);
+    covered.add(c+','+(r+1)); covered.add((c+1)+','+(r+1));
   }
-  return f;
+  function ok(c,r){
+    return covered.has(c+','+r)&&covered.has((c+1)+','+r)&&
+           covered.has(c+','+(r+1))&&covered.has((c+1)+','+(r+1));
+  }
+
+  // Seed rows: 0, 2, 4, ... and last row if odd
+  const seedRows=[...Array(Math.ceil(totalRows/2))].map((_,i)=>i*2);
+  if((totalRows-1)%2!==0) seedRows.push(totalRows-1);
+  // Seed cols: 0, 2, 4, ... and last col if odd
+  const seedCols=[...Array(Math.ceil(cols/2))].map((_,i)=>i*2);
+  if((cols-1)%2!==0) seedCols.push(cols-1);
+
+  for(const r of seedRows) for(const c of seedCols) addFrame(c,r);
+
+  // Gap-fill any remaining uncovered decks
+  for(let r=0;r<totalRows;r++) for(let c=0;c<cols;c++) if(!ok(c,r)) addFrame(c,r);
+
+  return Array.from({length:totalRows},(_,r)=>Array.from({length:cols},(_,c)=>framed.has(c+','+r)));
 }
 
 function calcLayout(w,d){
   const rows=buildRows(w,d);
   if(!rows)return null;
-  const uCols=w/4,tRows=rows.length;
-  const fg=computeFramed(uCols,tRows);
+  const tRows=rows.length;
+  // Compute framing on the actual deck grid per row.
+  // For mixed rows, use the widest deck (fewest cols) as the base grid,
+  // then map narrower-deck rows onto it.
+  // Find the minimum cols (widest deck) across all rows:
+  const minCols=Math.min(...rows.map(r=>w/r.deckW));
+  const fg=computeFramed(minCols,tRows);
+  const uCols=w/4; // used for node drawing only
   const fs=new Set();
   let frames=0,f48=0,f44=0,d48=0,d44=0,tot=0;
   for(let r=0;r<tRows;r++){
     const row=rows[r],cols=w/row.deckW,is48=row.deckD===8||row.deckW===8;
+    // Map this row's columns onto the fg grid
+    const colRatio=minCols/cols; // <=1 if this row has same or more cols
     for(let c=0;c<cols;c++){
-      const gc=row.deckW===8?c*2:c;
-      if(fg[r][gc]){frames++;fs.add(`${c},${r}`);if(is48)f48++;else f44++;}
+      // Map deck column c to frame-grid column
+      const gc=Math.round(c*colRatio);
+      if(gc<minCols&&fg[r]&&fg[r][gc]){frames++;fs.add(`${c},${r}`);if(is48)f48++;else f44++;}
       tot++;if(is48)d48++;else d44++;
     }
   }
