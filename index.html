@@ -86,6 +86,7 @@
       <div class="sb-title">
         <h1>UltraStage</h1>
         <p>KAD Fabrications</p>
+        <p style="margin-top:4px;color:#4a5568;font-size:0.5rem;letter-spacing:0.08em;">v0.71 · Updated Mar 24, 2026</p>
       </div>
     </div>
 
@@ -576,7 +577,7 @@ function exportPDF() {
 
       // ── FOOTER ───────────────────────────────────────────────────────────
       doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(160,160,160);
-      doc.text('KAD Fabrications · kadfab.com · UltraStage Performance Staging',PW/2,PH-mg,{align:'center'});
+      doc.text('KAD Fabrications · kadfab.com · UltraStage Performance Staging · v0.71',PW/2,PH-mg,{align:'center'});
 
       doc.save(`ultrastage-${W}x${D}.pdf`);
 
