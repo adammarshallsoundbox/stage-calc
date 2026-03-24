@@ -86,7 +86,7 @@
       <div class="sb-title">
         <h1>UltraStage</h1>
         <p>KAD Fabrications</p>
-        <p style="margin-top:4px;color:#4a5568;font-size:0.5rem;letter-spacing:0.08em;">v0.74 · Updated Mar 23, 2026 · 11:09 PM</p>
+        <p style="margin-top:4px;color:#4a5568;font-size:0.5rem;letter-spacing:0.08em;">v0.76 · Updated Mar 24, 2026</p>
       </div>
     </div>
 
@@ -468,6 +468,14 @@ function exportPDF() {
         const dpr=2; offC.width=inner*dpr; offC.height=dH*dpr;
         const oc=offC.getContext('2d'); oc.scale(dpr,dpr);
         oc.fillStyle='#ffffff'; oc.fillRect(0,0,inner,dH);
+        // Subtle grid
+        oc.strokeStyle='#eeeeee';oc.lineWidth=0.5;
+        for(let gx=0;gx<=inner;gx+=40){oc.beginPath();oc.moveTo(gx,0);oc.lineTo(gx,dH);oc.stroke();}
+        for(let gy=0;gy<=dH;gy+=40){oc.beginPath();oc.moveTo(0,gy);oc.lineTo(inner,gy);oc.stroke();}
+        // Light grid lines for readability
+        oc.strokeStyle='#eeeeee';oc.lineWidth=0.5;
+        for(let x=0;x<=inner;x+=40){oc.beginPath();oc.moveTo(x,0);oc.lineTo(x,dH);oc.stroke();}
+        for(let yy=0;yy<=dH;yy+=40){oc.beginPath();oc.moveTo(0,yy);oc.lineTo(inner,yy);oc.stroke();}
         const PAD2=40, sc=Math.min((inner-PAD2*2)/W,(dH-PAD2*2)/D,80);
         const sW2=W*sc, sH2=D*sc;
         const ox2=(inner-sW2)/2, oy2=(dH-sH2)/2;
@@ -478,21 +486,23 @@ function exportPDF() {
           const row=rows[ri],cols=W/row.deckW,cW=row.deckW*sc,cH=row.depth*sc,dy=rY[ri];
           for(let c=0;c<cols;c++){
             const dx=ox2+c*cW,hf=fs.has(`${c},${ri}`);
-            oc.fillStyle=row.deckD===8?(hf?'#1c3a5e':'#101e30'):row.deckW===8?(hf?'#3a2060':'#1a0e30'):(hf?'#1a3d35':'#0d2018');
+            // Print-friendly: light tinted fills, clear outlines
+            if(row.deckD===8)      oc.fillStyle=hf?'#dce8f5':'#eef4fb';
+            else if(row.deckW===8) oc.fillStyle=hf?'#e8ddf5':'#f2eefb';
+            else                   oc.fillStyle=hf?'#d8eee4':'#edf7f1';
             oc.fillRect(dx,dy,cW,cH);
-            oc.strokeStyle=row.deckD===8?'#2a5080':row.deckW===8?'#5a3a90':'#2a6048';
-            oc.lineWidth=1;oc.strokeRect(dx,dy,cW,cH);
+            oc.strokeStyle='#888888';oc.lineWidth=0.75;oc.strokeRect(dx,dy,cW,cH);
             if(hf){
-              const p=3;oc.strokeStyle='#aaaaaa';oc.lineWidth=1.5;oc.globalAlpha=0.5;
+              // X-frame in grey
+              const p=4;oc.strokeStyle='#999999';oc.lineWidth=1;oc.globalAlpha=0.7;
               oc.beginPath();oc.moveTo(dx+p,dy+p);oc.lineTo(dx+cW-p,dy+cH-p);oc.stroke();
               oc.beginPath();oc.moveTo(dx+cW-p,dy+p);oc.lineTo(dx+p,dy+cH-p);oc.stroke();
-              oc.globalAlpha=0.7;oc.fillStyle='#aaaaaa';
-              oc.beginPath();oc.arc(dx+cW/2,dy+cH/2,Math.max(2,Math.min(cW,cH)*0.06),0,Math.PI*2);oc.fill();
               oc.globalAlpha=1;
             }
           }
         }
-        oc.strokeStyle='#f0a500';oc.lineWidth=2;oc.strokeRect(ox2,oy2,sW2,sH2);
+        // Stage outline in dark
+        oc.strokeStyle='#333333';oc.lineWidth=2;oc.strokeRect(ox2,oy2,sW2,sH2);
         const nYs=[...rY,oy2+D*sc];
         for(let rb=0;rb<=tRows;rb++){
           const py=nYs[rb];
@@ -504,14 +514,15 @@ function exportPDF() {
             const fA=(rb>0     &&xsA.includes(xFt))?1:0;
             const fB=(rb<tRows &&xsB.includes(xFt))?1:0;
             const outerX=xFt===0||xFt===W, outerY=rb===0||rb===tRows;
-            oc.fillStyle=(outerX&&outerY)?'#e03030':(outerX||outerY)?'#30b860':(fA+fB>=2)?'#4a9eff':'#30b860';
+            // Print-friendly node colours — solid fills with white outline
+            const nodeCol=(outerX&&outerY)?'#cc2222':(outerX||outerY)?'#229944':(fA+fB>=2)?'#2266cc':'#229944';
             const r=Math.max(4,sc*0.18);
-            oc.beginPath();oc.arc(px,py,r,0,Math.PI*2);oc.fill();
-            oc.fillStyle='rgba(255,255,255,0.9)';
-            oc.beginPath();oc.arc(px,py,r*0.4,0,Math.PI*2);oc.fill();
+            // Outer white ring for contrast
+            oc.fillStyle='#ffffff';oc.beginPath();oc.arc(px,py,r+1.5,0,Math.PI*2);oc.fill();
+            oc.fillStyle=nodeCol;oc.beginPath();oc.arc(px,py,r,0,Math.PI*2);oc.fill();
           }
         }
-        oc.fillStyle='#888';oc.font='9px monospace';oc.textAlign='center';oc.textBaseline='top';
+        oc.fillStyle='#444444';oc.font='9px monospace';oc.textAlign='center';oc.textBaseline='top';
         oc.fillText(`← ${W}' →`,ox2+sW2/2,oy2+sH2+8);
         oc.save();oc.translate(ox2-16,oy2+sH2/2);oc.rotate(-Math.PI/2);
         oc.textAlign='center';oc.textBaseline='middle';oc.fillText(`← ${D}' →`,0,0);oc.restore();
@@ -562,22 +573,23 @@ function exportPDF() {
         sRow("LP-2  Double Nodes",lp2,"double nodes",true);
         sRow("LP-4  Quads",lp4,"quad nodes",false);
         y+=8;
-        // Totals bar
-        doc.setFillColor(20,20,20);doc.rect(mg,y,inner,32,'F');
+        // Totals bar — light grey for print friendliness
+        doc.setFillColor(240,240,240);doc.rect(mg,y,inner,32,'F');
+        doc.setDrawColor(180,180,180);doc.setLineWidth(0.5);doc.rect(mg,y,inner,32,'S');
         const cols3=[mg+12, mg+inner*0.34, mg+inner*0.65];
         const labels3=['TOTAL DECKS','TOTAL X-FRAMES','TOTAL LP NODES'];
         const vals3=[tot, f48+f44, lp1+lp2+lp4];
         cols3.forEach((cx,i)=>{
-          doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(240,165,0);
+          doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(80,80,80);
           doc.text(labels3[i],cx,y+11);
-          doc.setFontSize(15);doc.setTextColor(255,255,255);
+          doc.setFontSize(15);doc.setTextColor(20,20,20);
           doc.text(String(vals3[i]),cx,y+25);
         });
       }
 
       // ── FOOTER ───────────────────────────────────────────────────────────
       doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(160,160,160);
-      doc.text('KAD Fabrications · kadfab.com · UltraStage Performance Staging · v0.74',PW/2,PH-mg,{align:'center'});
+      doc.text('KAD Fabrications · kadfab.com · UltraStage Performance Staging · v0.76',PW/2,PH-mg,{align:'center'});
 
       doc.save(`ultrastage-${W}x${D}.pdf`);
 
