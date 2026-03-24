@@ -86,7 +86,7 @@
       <div class="sb-title">
         <h1>UltraStage</h1>
         <p>KAD Fabrications</p>
-        <p style="margin-top:4px;color:#4a5568;font-size:0.5rem;letter-spacing:0.08em;">v0.73 · Updated Mar 23, 2026 · 11:21 PM</p>
+        <p style="margin-top:4px;color:#4a5568;font-size:0.5rem;letter-spacing:0.08em;">v0.74 · Updated Mar 24, 2026 · 5:09 AM</p>
       </div>
     </div>
 
@@ -415,10 +415,10 @@ function drawDiagram(rows,uCols,tRows,fs){
       const outerX=xFt===0||xFt===W;
       const outerY=rb===0||rb===tRows;
       let color,r;
-      if(outerX&&outerY)      {color='#e03030';r=Math.max(5,scale*.22);}
-      else if(outerX||outerY) {color='#30b860';r=Math.max(4,scale*.18);}
-      else if(sharing>=2)     {color='#4a9eff';r=Math.max(3.5,scale*.15);}
-      else                    {color='#30b860';r=Math.max(4,scale*.18);}
+      if(outerX&&outerY)      {color='#e03030';r=Math.max(5,scale*.18);}
+      else if(outerX||outerY) {color='#30b860';r=Math.max(5,scale*.18);}
+      else if(sharing>=2)     {color='#4a9eff';r=Math.max(5,scale*.18);}
+      else                    {color='#30b860';r=Math.max(5,scale*.18);}
       ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.arc(px,py,r*.4,0,Math.PI*2);ctx.fill();
     }
@@ -505,7 +505,7 @@ function exportPDF() {
             const fB=(rb<tRows &&xsB.includes(xFt))?1:0;
             const outerX=xFt===0||xFt===W, outerY=rb===0||rb===tRows;
             oc.fillStyle=(outerX&&outerY)?'#e03030':(outerX||outerY)?'#30b860':(fA+fB>=2)?'#4a9eff':'#30b860';
-            const r=Math.max(3,sc*0.18);
+            const r=Math.max(4,sc*0.18);
             oc.beginPath();oc.arc(px,py,r,0,Math.PI*2);oc.fill();
             oc.fillStyle='rgba(255,255,255,0.9)';
             oc.beginPath();oc.arc(px,py,r*0.4,0,Math.PI*2);oc.fill();
@@ -577,7 +577,7 @@ function exportPDF() {
 
       // ── FOOTER ───────────────────────────────────────────────────────────
       doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(160,160,160);
-      doc.text('KAD Fabrications · kadfab.com · UltraStage Performance Staging · v0.73',PW/2,PH-mg,{align:'center'});
+      doc.text('KAD Fabrications · kadfab.com · UltraStage Performance Staging · v0.74',PW/2,PH-mg,{align:'center'});
 
       doc.save(`ultrastage-${W}x${D}.pdf`);
 
